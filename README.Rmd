@@ -1,0 +1,469 @@
+---
+output: 
+ md_document:
+   variant: markdown_github
+---
+```{r, include = FALSE, echo=FALSE}
+
+tinytex::install_tinytex(force = TRUE)
+options(repos = "https://cran.mirror.ac.za/")
+
+```
+
+```{r include=FALSE, echo=TRUE, warnings = FALSE}
+
+rm(list = ls())
+
+gc()
+
+library(pacman)
+library(tidyverse) # General Use 
+library(lubridate) # for dates
+library(stargazer) # for tables
+library(texreg)
+library(huxtable)
+library(gridExtra)
+library(moments)
+
+library(seasonal) # to seasonally adjust TBills to match the Deflator. 
+library(tseries) # general use for this project
+library(vars) # vars & vecm
+library(lmtest) # Ljung-Box
+library(sjPlot) # tables
+library(urca) # dickey-fullers
+library(tsDyn)
+
+library(ggplot2) # plots
+
+```
+
+# Data Wrangling
+
+```{r}
+
+# Data wrangling. (tidyverse)
+
+TData <- read.csv("Data/TBillData.csv") %>% # load
+
+         rename(TBillRate = DTB3) %>% # renaming column 
+
+         subset(
+           
+           DATE < "2023-01-01" & 
+             
+           DATE <= "1991-10-01") # making vectors equal length
+
+
+InfData <- read.csv("Data/PriceDeflator(SAdjust).csv") %>% # load
+ 
+         subset(
+           
+           DATE >= "1954-01-01" & 
+             
+           DATE <= "1991-10-01") %>% # only after 1954
+
+         rename(Deflator = A191RI1Q225SBEA) # rename column
+
+###
+
+TData_ts <- ts(TData$TBillRate, 
+               
+               start = c(year(TData$DATE[1]), 
+                         
+                         quarter(TData$DATE[1])),
+               
+               frequency = 4) # convert to ts
+
+decomp <- decompose(TData_ts) # Perform seasonal decomposition on data.
+
+TData_ts <- TData_ts - decomp$seasonal #seasonally adjust 
+
+rm(decomp)
+
+###
+
+InfData_ts <- ts(InfData$Deflator, 
+               start = c(year(InfData$DATE[1]), 
+                         
+                         quarter(InfData$DATE[1])),
+               
+               frequency = 4)
+
+# At this point, R interprets the data as Time series, seasonally adjusted, vectors of equal length, indexed by recognizable date columns. This means I can begin doing actual tests. 
+
+# For Johansen: 
+
+# Step 1: check that all variables are I(1). [y] 
+# Step 2: Unrestricted VAR. Test whether white noise errors. [n]
+# Step 3: Estimate specific VECM, do trace and max eigenvalue tests. 
+# Step 4: Impose r, reduced rank regression. 
+# Step 5: forecasts; model adequacy. 
+
+```
+
+# Data Plotting and Comparison
+
+```{r , include = TRUE}
+
+plot(TData_ts, main = "GDP Deflator and US 3-Month Treasury Bill Rate",
+               xlab = "",
+               ylab = "",
+               col = "red3")
+lines(InfData_ts, 
+      col = "blue3")
+legend("topright",
+       c("T-Bill", "Deflator"), 
+       col = c("red3", "blue3"), 
+       lty = 1,
+       cex = 0.6)
+
+# must compare this with graph from their actual paper. 
+
+```
+
+```{r , include=TRUE, out.width='85%', out.height='85%', fig.align='center'}
+
+# Comparing with original paper. 
+
+knitr::include_graphics("Images/FirstPlot.png", 
+                         dpi = 300)
+
+```
+
+# Formal Dickey-Fuller tests for a Unit Root
+
+```{r echo=TRUE, include=FALSE}
+
+adf11 <- adf.test(InfData_ts) # non-stationary (p-values)
+adf1 <- ur.df(InfData_ts, type = "trend", selectlags = "AIC")
+
+adf22 <- adf.test(TData_ts) # non-stationary (p-values)
+adf2 <- ur.df(TData_ts, type = "trend", selectlags = "AIC")
+
+summary(adf1) # Test statistic -2.3007 > all significance levels. 
+adf11 # p value = 0.5384
+
+summary(adf2) # Test Statistic -2.6581 > all significant values. 
+adf22 # p value = 0.1468
+
+# speak about how dickey fuller tests have weak power at these sort of boundary values, maybe this is why the paper added MA terms (even if I do not really think it is necessary). 
+
+```
+
+# Vector Autoregression and Tests for White Noise Errors
+
+```{r , echo=TRUE, include = FALSE}
+
+# unrestricted VAR (NB)
+
+Interest <- (TData_ts - mean(TData_ts)) # de-mean both
+Inflation <- (InfData_ts - mean(InfData_ts))
+
+VARdata <- cbind(Interest, Inflation)
+Var <- VAR(VARdata, p = 6, type = "const")
+serial.test(Var) # autocorrelation is not present. 
+
+###
+
+resids <- resid(Var)
+
+StdResid <- (resids - mean(resids))/sd(resids) # standardise for comparison
+
+ActNorm <- rnorm(1000000)
+
+kurtosis(StdResid) # Inflation normal, T-Bill is leptokurtic (extremes).
+
+# this can easily lead to biased estimates and incorrect inference. 
+
+mean(resids) # basically zero. 
+
+```
+
+```{r , echo = TRUE, include=TRUE, out.width='75%', out.height='75%', fig.align='center'}
+
+plot(density(StdResid), 
+     main = "Distribution of Unrestricted VAR Residuals", 
+     col = "red3")
+lines(density(ActNorm), 
+      col = "blue3")
+legend("topright",
+       c("Residuals", "Standard Normal Distribution"),
+       col = c("red3", "blue3"),
+       lty = 1, 
+        cex = 0.6)
+
+# mean zero
+# Speak about how Kurtosis affects Maximum Likelihood estimations.
+
+```
+
+```{r , echo = FALSE, include=TRUE, out.width='75%', out.height='75%', fig.align='center'}
+
+# plotting ACFs of unrestricted VAR. Interpret. 
+
+acf(resids, 
+    col="red3", 
+    main = NA, 
+    lag.max = 20)
+mtext("Autocorrelation Functions for Residuals of the Unrestricted VAR", 
+      line=2, 
+      cex=1) # white noise
+
+# no clusters of large residuals. 
+# more than 95% of errors are within 95% confidence bands. 
+# no large clusters of residuals (no structural break). 
+
+```
+
+# Vector Error Correction Mechanism and Eigenvalue Tests
+
+## Trace and Maximum Eigenvalue Tests
+
+```{r , echo=TRUE, include=FALSE}
+
+# lag length 4. 
+
+# First specification; (H1r) allows for deterministic trends in the data. 
+
+# Second specification; (H1*r)allows for a non-zero mean of the equilibrium relationship, but does not allow for deterministic trends. 
+
+# Third specification; (H0r) restricts the mean of the relationship to zero.
+
+# Essentially, now just test whether there is at least one co-integrating relationship. 
+
+#Specification 1: 
+
+Johansen11 <- ca.jo(VARdata, 
+                    type="trace", 
+                    ecdet="trend", 
+                    K=2)
+
+urca::summary(Johansen11) # There is at least one... 
+
+Johansen12 <- ca.jo(VARdata, 
+                    type="eigen", 
+                    ecdet="trend", 
+                    K=2)
+
+summary(Johansen12) # At least one... 
+
+### At 95% level there is at least one co-integrating relationship. 
+
+#Specification 2: [this one won]
+
+Johansen21 <- ca.jo(VARdata, 
+                    type="trace", 
+                    ecdet="const", 
+                    K=2)
+
+summary(Johansen21) # There is at least one... 
+
+Johansen22 <- ca.jo(VARdata, 
+                    type="eigen", 
+                    ecdet="const", 
+                    K=2)
+
+summary(Johansen22) # barely at 95% level but there is 1. 
+
+#Specification 3: 
+
+Johansen31 <- ca.jo(VARdata, 
+                    type="trace", 
+                    ecdet="none", 
+                    K=2)
+
+summary(Johansen31) # 15.88 vs 15.94 very close actually. 
+
+Johansen32 <- ca.jo(VARdata, 
+                    type="eigen", 
+                    ecdet="none", 
+                    K=2)
+
+summary(Johansen32)
+
+# All 3 tests indicate one co-integrating relationship between the variables.
+
+# R automatically selects lags based on the AIC, so cannot fiddle to see how sensitive these results are. The authors claim that it is not very sensitive. 
+
+# HOW DO I CHOOSE? How did they choose? 
+
+rm(Johansen11,Johansen12, Johansen22, Johansen31, Johansen32) # housekeeping
+
+```
+
+## Imposing Restrictions and Estimating the Model
+
+```{r , include=FALSE, echo=TRUE}
+
+VECM1 <- VECM(VARdata, 1, r = 1, estim=("ML"))
+summary(VECM1) # Parsimonious 
+# ECT of Inflation is insignificant. 
+
+VECM2 <- VECM(VARdata, 2, r = 1, estim=("ML"))
+summary(VECM2)
+# Less parsimonious, ECT of interest remains significant. 
+
+VECM3 <- VECM(VARdata, 3, r = 1, estim=("ML"), include = "const")
+summary(VECM3)
+
+tsDyn::coefA(VECM3) 
+tsDyn::coefB(VECM3)
+
+α <- c(-0.0655, -0.634) # NORMALISE...
+β <- c(1, -0.4047558)
+
+M <- cbind(α, β)
+Pi <- as.data.frame(M, 
+                    row.names = c("Interest", 
+                                  "Inflation")
+                    )
+
+causality(Var, cause = "Interest") 
+
+# GRANGER p value = 0.013, can reject the possibility that interest does not granger cause inflation. 
+
+# But, with instant p = 0.5365 we can reject the possibility that there is an instantaneous response of inflation to changes in interest. 
+
+### The nominal interest rate does not instantaneously-cause inflation.
+
+### Inflation is indeed weakly exogenous... 
+
+### In general, the Wald test is a robust test that does not require the underlying data to follow a specific distribution, as long as the sample size is sufficiently large.
+
+```
+
+## Model Adequacy
+
+```{r K, echo=TRUE, include=FALSE}
+
+VecRes <- resid(VECM3) 
+
+#3 (4 lags) is the smallest number of lags that removes autocorrelation in the residuals in the Ljung-Box tests below. 
+
+mean(VecRes) # 0 expected value.
+
+Box.test(VecRes[,1], lag = 5, type = "Ljung-Box") # clear
+
+Box.test(VecRes[,2], lag = 5, type = "Ljung-Box") # clear
+
+rm(VECM1, VECM2) # Housekeeping
+
+```
+
+```{r , include=TRUE, echo=TRUE, out.width='75%', out.height='75%', fig.align='center'}
+
+plot(density(VecRes), 
+     main = "Distribution of Restriced VECM Residuals", 
+     col = "red3")
+lines(density(ActNorm), 
+      col = "blue3")
+legend("topright",
+       c("Residuals", "Standard Normal Distribution"),
+       col = c("red3", "blue3"),
+       lty = 1,
+        cex = 0.6)
+
+# Kurtosis once again. Very high. Maximum Likelihood unlikely to be appropriate.
+
+```
+
+```{r M, include=TRUE, echo=TRUE, out.width='85%', out.height='85%', fig.align='center'}
+
+acf(VecRes, 
+    col="red3", 
+    main = NA, 
+    lag.max = 20)
+mtext("Autocorrelation Functions for the Restricted VECM", 
+      line=2, 
+      cex=1)
+
+```
+
+# Impulse Response Functions
+
+```{r}
+
+# Creating IRFS. 
+
+IrfVec <- vec2var(Johansen21, r = 1)
+
+TempIRF1 <- vars::irf(IrfVec, 
+                      impulse = "Interest", 
+                      response = "Inflation", 
+                      n.ahead = 40, 
+                      boot = TRUE, runs = 100)
+
+TempIRF2 <- vars::irf(IrfVec, 
+                      impulse = "Interest", 
+                      response = "Interest", 
+                      n.ahead = 40, 
+                      boot = TRUE, runs = 100)
+
+PermIrf1 <- vars::irf(IrfVec, 
+                      impulse = "Inflation", 
+                      response = "Interest",
+                      n.ahead = 40, 
+                      boot = TRUE, runs = 100)
+
+PermIrf2 <- vars::irf(IrfVec, 
+                      impulse = "Inflation", 
+                      response = "Inflation",
+                      n.ahead = 40, 
+                      boot = TRUE, runs = 100)
+
+```
+
+
+```{r , echo=TRUE, warning=FALSE, include=TRUE}
+
+# lots and lots of very ugly code here that you can painstakingly read through in the Code folder. Hideous code though, I had not yet, at this point in my programming journey, learned how to code in a pretty way. 
+
+source("code/IRFs.R")
+
+grid.arrange(plot2, plot3, plot1, plot4, 
+             ncol = 2)
+
+rm(plot1, plot2, plot3, plot4)
+
+```
+
+```{r , include=TRUE, echo=TRUE, out.width='80%', out.height='80%', fig.align='center'}
+
+knitr::include_graphics("Images/Impulses.png", 
+                         dpi = 300)
+
+```
+
+# Variance Decomposition
+
+```{r , include=TRUE, echo=FALSE, out.width='100%'}
+
+knitr::include_graphics("Images/Variance.png", 
+                         dpi = 300)
+
+```
+
+```{r , echo=TRUE, warning=FALSE, include=TRUE,  out.width='80%', out.height='80%', fig.align='center'}
+
+source("Code/VarianceDecomp.R")
+
+grid.arrange(plot5, plot6, ncol = 1)
+
+## Nominal Interest is Red and Inflation is Blue. 
+
+```
+
+\newpage
+
+# Bibliography 
+
+Crowder, W.J & Hoffman, D.L. 1996. The Long-Run Relationship between Nominal Interest Rates and Inflation: The Fisher Equation Revisited. *Journal of Money, Credit and Banking*, 28(1):102-118.
+
+Enders, W. 2015. Applied Econometric Time Series. 4th edition. New Jersey: John Wiley & Sons, Inc. 
+
+Gross Domestic Product: Implicit Price Deflator [Online]. [n.d.]. Available: 
+https://fred.stlouisfed.org/series/A191RI1Q225SBEA [2023, May 10]. 
+
+Monetary Policy Principles and Practice [Online]. [n.d.]. Available: https://www.federalreserve.gov/monetarypolicy/historical-approaches-to-monetary-policy.htm [2023, May 10].
+
+3-Month Treasury Bill Secondary Market Rate, Discount Basis [Online]. [n.d.] Available: https://fred.stlouisfed.org/series/DTB3 [2023, May 10].
