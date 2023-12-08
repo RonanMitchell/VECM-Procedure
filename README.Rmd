@@ -10,7 +10,7 @@ options(repos = "https://cran.mirror.ac.za/")
 
 ```
 
-```{r include=FALSE, echo=TRUE, warnings = FALSE}
+```{r include=TRUE, echo=TRUE, warnings = FALSE}
 
 rm(list = ls())
 
@@ -134,7 +134,7 @@ knitr::include_graphics("Images/FirstPlot.png",
 
 # Formal Dickey-Fuller tests for a Unit Root
 
-```{r echo=TRUE, include=FALSE}
+```{r }
 
 adf11 <- adf.test(InfData_ts) # non-stationary (p-values)
 adf1 <- ur.df(InfData_ts, type = "trend", selectlags = "AIC")
@@ -154,7 +154,7 @@ adf22 # p value = 0.1468
 
 # Vector Autoregression and Tests for White Noise Errors
 
-```{r , echo=TRUE, include = FALSE}
+```{r }
 
 # unrestricted VAR (NB)
 
@@ -221,7 +221,7 @@ mtext("Autocorrelation Functions for Residuals of the Unrestricted VAR",
 
 ## Trace and Maximum Eigenvalue Tests
 
-```{r , echo=TRUE, include=FALSE}
+```{r }
 
 # lag length 4. 
 
@@ -295,7 +295,7 @@ rm(Johansen11,Johansen12, Johansen22, Johansen31, Johansen32) # housekeeping
 
 ## Imposing Restrictions and Estimating the Model
 
-```{r , include=FALSE, echo=TRUE}
+```{r }
 
 VECM1 <- VECM(VARdata, 1, r = 1, estim=("ML"))
 summary(VECM1) # Parsimonious 
@@ -438,7 +438,7 @@ knitr::include_graphics("Images/Impulses.png",
 
 # Variance Decomposition
 
-```{r , include=TRUE, echo=FALSE, out.width='100%'}
+```{r }
 
 knitr::include_graphics("Images/Variance.png", 
                          dpi = 300)
