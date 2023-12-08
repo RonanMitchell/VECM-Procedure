@@ -55,6 +55,8 @@ library(ggplot2) # plots
 * tsDyn
 * ggplot2
 
+* base R is largely used. 
+
 # Data Wrangling
 
 ```{r}

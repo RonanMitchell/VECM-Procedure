@@ -22,7 +22,9 @@
 
 -   tsDyn
 
-library(ggplot2) \# plots
+-   ggplot2
+
+-   base R is largely used.
 
 # Data Wrangling
 
