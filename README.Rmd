@@ -53,8 +53,7 @@ library(ggplot2) # plots
 * lmtest
 * urca
 * tsDyn
-
-library(ggplot2) # plots
+* ggplot2
 
 # Data Wrangling
 
