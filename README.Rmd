@@ -10,7 +10,7 @@ options(repos = "https://cran.mirror.ac.za/")
 
 ```
 
-```{r include=TRUE, echo=TRUE, warnings = FALSE}
+```{r include=FALSE, echo=FALSE, warnings = FALSE}
 
 rm(list = ls())
 
@@ -38,6 +38,23 @@ library(tsDyn)
 library(ggplot2) # plots
 
 ```
+
+# Required Packages: 
+
+* pacman
+* tidyverse
+* lubridate
+* gridExtra
+* moments
+
+* seasonal
+* tseries
+* vars
+* lmtest
+* urca
+* tsDyn
+
+library(ggplot2) # plots
 
 # Data Wrangling
 

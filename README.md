@@ -1,204 +1,28 @@
-``` r
-rm(list = ls())
+# Required Packages:
 
-gc()
-```
+-   pacman
 
-    ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 465035 24.9    1006550 53.8   644242 34.5
-    ## Vcells 838607  6.4    8388608 64.0  1647761 12.6
+-   tidyverse
 
-``` r
-#
+-   lubridate
 
-library(pacman)
-```
+-   gridExtra
 
-    ## Warning: package 'pacman' was built under R version 4.2.3
+-   moments
 
-``` r
-library(tidyverse) # General Use 
-```
+-   seasonal
 
-    ## Warning: package 'tidyverse' was built under R version 4.2.3
+-   tseries
 
-    ## Warning: package 'ggplot2' was built under R version 4.2.3
+-   vars
 
-    ## Warning: package 'tibble' was built under R version 4.2.3
+-   lmtest
 
-    ## Warning: package 'dplyr' was built under R version 4.2.3
+-   urca
 
-    ## Warning: package 'lubridate' was built under R version 4.2.3
+-   tsDyn
 
-    ## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-    ## ✔ dplyr     1.1.3     ✔ readr     2.1.4
-    ## ✔ forcats   1.0.0     ✔ stringr   1.5.0
-    ## ✔ ggplot2   3.4.2     ✔ tibble    3.2.1
-    ## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
-    ## ✔ purrr     1.0.1     
-    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-    ## ✖ dplyr::filter() masks stats::filter()
-    ## ✖ dplyr::lag()    masks stats::lag()
-    ## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors
-
-``` r
-library(lubridate) # for dates
-library(stargazer) # for tables
-```
-
-    ## 
-    ## Please cite as: 
-    ## 
-    ##  Hlavac, Marek (2022). stargazer: Well-Formatted Regression and Summary Statistics Tables.
-    ##  R package version 5.2.3. https://CRAN.R-project.org/package=stargazer
-
-``` r
-library(texreg)
-```
-
-    ## Warning: package 'texreg' was built under R version 4.2.3
-
-    ## Version:  1.38.6
-    ## Date:     2022-04-06
-    ## Author:   Philip Leifeld (University of Essex)
-    ## 
-    ## Consider submitting praise using the praise or praise_interactive functions.
-    ## Please cite the JSS article in your publications -- see citation("texreg").
-    ## 
-    ## Attaching package: 'texreg'
-    ## 
-    ## The following object is masked from 'package:tidyr':
-    ## 
-    ##     extract
-
-``` r
-library(huxtable)
-```
-
-    ## Warning: package 'huxtable' was built under R version 4.2.3
-
-    ## 
-    ## Attaching package: 'huxtable'
-    ## 
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     add_rownames
-    ## 
-    ## The following object is masked from 'package:ggplot2':
-    ## 
-    ##     theme_grey
-
-``` r
-library(gridExtra)
-```
-
-    ## Warning: package 'gridExtra' was built under R version 4.2.3
-
-    ## 
-    ## Attaching package: 'gridExtra'
-    ## 
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     combine
-
-``` r
-library(moments)
-
-library(seasonal) # to seasonally adjust TBills to match the Deflator. 
-```
-
-    ## Warning: package 'seasonal' was built under R version 4.2.3
-
-    ## 
-    ## Attaching package: 'seasonal'
-    ## 
-    ## The following object is masked from 'package:huxtable':
-    ## 
-    ##     final
-    ## 
-    ## The following object is masked from 'package:tibble':
-    ## 
-    ##     view
-
-``` r
-library(tseries) # general use for this project
-```
-
-    ## Warning: package 'tseries' was built under R version 4.2.3
-
-    ## Registered S3 method overwritten by 'quantmod':
-    ##   method            from
-    ##   as.zoo.data.frame zoo
-
-``` r
-library(vars) # vars & vecm
-```
-
-    ## Warning: package 'vars' was built under R version 4.2.3
-
-    ## Loading required package: MASS
-    ## 
-    ## Attaching package: 'MASS'
-    ## 
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     select
-    ## 
-    ## Loading required package: strucchange
-
-    ## Warning: package 'strucchange' was built under R version 4.2.3
-
-    ## Loading required package: zoo
-
-    ## Warning: package 'zoo' was built under R version 4.2.3
-
-    ## 
-    ## Attaching package: 'zoo'
-    ## 
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     as.Date, as.Date.numeric
-    ## 
-    ## Loading required package: sandwich
-    ## 
-    ## Attaching package: 'strucchange'
-    ## 
-    ## The following object is masked from 'package:stringr':
-    ## 
-    ##     boundary
-    ## 
-    ## Loading required package: urca
-
-    ## Warning: package 'urca' was built under R version 4.2.3
-
-    ## Loading required package: lmtest
-
-    ## Warning: package 'lmtest' was built under R version 4.2.3
-
-``` r
-library(lmtest) # Ljung-Box
-library(sjPlot) # tables
-```
-
-    ## Warning: package 'sjPlot' was built under R version 4.2.3
-
-    ## 
-    ## Attaching package: 'sjPlot'
-    ## 
-    ## The following object is masked from 'package:huxtable':
-    ## 
-    ##     font_size
-
-``` r
-library(urca) # dickey-fullers
-library(tsDyn)
-```
-
-    ## Warning: package 'tsDyn' was built under R version 4.2.3
-
-``` r
-library(ggplot2) # plots
-```
+library(ggplot2) \# plots
 
 # Data Wrangling
 
